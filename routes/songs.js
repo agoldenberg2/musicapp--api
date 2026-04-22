@@ -3,7 +3,7 @@ const router = express.Router();
 const { Song } = require('../models/relations');
 
 // CREATE
-router.post('/', async (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
   try {
     const item = await Song.create(req.body);
     res.status(201).json(item);
@@ -13,20 +13,20 @@ router.post('/', async (req, res) => {
 });
 
 // READ ALL
-router.get('/', async (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   const items = await Song.findAll();
   res.json(items);
 });
 
 // READ ONE
-router.get('/:id', async (req, res) => {
+router.get('/:id', requireAuth, async (req, res) => {
   const item = await Song.findByPk(req.params.id);
   if (!item) return res.status(404).json({ error: "Not found" });
   res.json(item);
 });
 
 // UPDATE
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireAuth,  async (req, res) => {
   const item = await Song.findByPk(req.params.id);
   if (!item) return res.status(404).json({ error: "Not found" });
 
@@ -35,7 +35,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAuth, async (req, res) => {
   const item = await Song.findByPk(req.params.id);
   if (!item) return res.status(404).json({ error: "Not found" });
 

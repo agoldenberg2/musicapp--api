@@ -4,7 +4,20 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 
 const app = express();
-const SECRET_KEY = 'mykey'; 
+const SECRET_KEY = process.env.JWT_SECRET;
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN;
+
+const bcrypt = require('bcrypt');
+const { User } = require('./models');
+require('dotenv').config();
+
+// Load environment variables
+if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET is missing');
+}
+if (!process.env.JWT_EXPIRES_IN) {
+    throw new Error('JWT_EXPIRES_IN is missing');
+}
 
 // Middleware
 app.use(express.json());
@@ -39,14 +52,34 @@ app.get('/test', (req, res) => {
 
 
 // Login route
-app.post('/login', (req, res) => {
-  const { username } = req.body;
+app.post('/api/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+// Find user by email
+        const user = await User.findOne({ where: { email } });
+        if (!user) {
+            return res.status(401).json({ error: 'Invalid email or password' });
+        }
+// Check password
+        const isValid = await bcrypt.compare(password, user.password);
+        if (!isValid) {
+            return res.status(401).json({ error: 'Invalid email or password' });
+        }
+// Generate JWT
+        const token = jwt.sign(
+            {
+                id: user.id,
+                email: user.email,
+                role: user.role
+            },
+            process.env.JWT_SECRET,
+            { expiresIn: process.env.JWT_EXPIRES_IN }
+        );
 
-  const user = { username };
-
-  const token = jwt.sign(user, SECRET_KEY, { expiresIn: '1h' });
-
-  res.json({ token });
+        res.json({ token, user });
+    } catch (err) {
+        res.status(500).json({ error: 'Login failed' });
+    }
 });
 
 // Middleware to protect routes

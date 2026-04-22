@@ -2,9 +2,27 @@ const express = require('express');
 const router = express.Router();
 const { Playlist } = require('../models/relations');
 
+const jwt = require('jsonwebtoken');
+require('dotenv').config();
+
+function authenticateToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if (!token) return res.sendStatus(401);
+
+    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+        if (err) return res.sendStatus(403);
+        req.user = user;
+        next();
+    });
+}
+
+// Apply authentication middleware to all routes in this router
+router.use(authenticateToken);
+
 // CREATE
-router.post('/', async (req, res) => {
-  try {
+router.post('/', requireAuth, async (req, res) => {
+try {
     const song = await Playlist.create(req.body);
     res.status(201).json(song);
   } catch (err) {
@@ -13,20 +31,20 @@ router.post('/', async (req, res) => {
 });
 
 // READ ALL
-router.get('/', async (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   const songs = await Playlist.findAll();
   res.json(songs);
 });
 
 // READ ONE
-router.get('/:id', async (req, res) => {
+router.get('/:id', requireAuth, async (req, res) => {
   const song = await Song.findByPk(req.params.id);
   if (!song) return res.status(404).json({ error: "Not found" });
   res.json(song);
 });
 
 // UPDATE
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireAuth, async (req, res) => {
   const song = await Song.findByPk(req.params.id);
   if (!song) return res.status(404).json({ error: "Not found" });
 
@@ -35,7 +53,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAuth, async (req, res) => {
   const song = await Song.findByPk(req.params.id);
   if (!song) return res.status(404).json({ error: "Not found" });
 
